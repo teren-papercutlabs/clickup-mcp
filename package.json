@@ -1,0 +1,32 @@
+{
+  "name": "@mcp-servers/clickup",
+  "version": "0.1.0",
+  "description": "MCP server for ClickUp task management",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-server-clickup": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "clickup",
+    "task-management"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "files": [
+    "dist/**/*"
+  ]
+}
