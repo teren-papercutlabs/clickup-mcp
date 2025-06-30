@@ -36,7 +36,8 @@ export class ClickUpClient {
       Object.entries(queryParams).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
           if (Array.isArray(value)) {
-            value.forEach(v => url.searchParams.append(key, String(v)));
+            // ClickUp expects array parameters to have square brackets (e.g., assignees[]=123)
+            value.forEach(v => url.searchParams.append(`${key}[]`, String(v)));
           } else {
             url.searchParams.append(key, String(value));
           }
@@ -163,6 +164,30 @@ export class ClickUpClient {
     return this.request('GET', `/folder/${folderId}/list`);
   }
 
+  async getFolders(spaceId: string, archived: boolean = false): Promise<{ 
+    folders: Array<{ 
+      id: string; 
+      name: string; 
+      orderindex: number; 
+      task_count: string;
+      lists?: Array<{
+        id: string;
+        name: string;
+      }>;
+    }> 
+  }> {
+    try {
+      return await this.request('GET', `/space/${spaceId}/folder`, undefined, { archived });
+    } catch (error) {
+      // If no folders exist, return empty array
+      return { folders: [] };
+    }
+  }
+
+  async getFolderlessLists(spaceId: string): Promise<{ lists: Array<{ id: string; name: string }> }> {
+    return this.request('GET', `/space/${spaceId}/list`, undefined, { archived: false });
+  }
+
   // Helper method to get workspace structure
   async getWorkspaceStructure(): Promise<{
     teams: Array<{
@@ -171,6 +196,14 @@ export class ClickUpClient {
       spaces: Array<{
         id: string;
         name: string;
+        folders: Array<{
+          id: string;
+          name: string;
+          lists: Array<{
+            id: string;
+            name: string;
+          }>;
+        }>;
         lists: Array<{
           id: string;
           name: string;
@@ -182,13 +215,40 @@ export class ClickUpClient {
     const result = await Promise.all(
       teams.map(async team => {
         const { spaces } = await this.getSpaces(team.id);
-        const spacesWithLists = await Promise.all(
+        const spacesWithFoldersAndLists = await Promise.all(
           spaces.map(async space => {
-            const { lists } = await this.getLists(space.id);
-            return { ...space, lists };
+            // Get folders in the space (which already include their lists)
+            const { folders } = await this.getFolders(space.id);
+            
+            // Extract just the id and name from the folder lists
+            const foldersWithLists = folders.map(folder => ({
+              id: folder.id,
+              name: folder.name,
+              lists: (folder.lists || []).map(list => ({
+                id: list.id,
+                name: list.name
+              }))
+            }));
+            
+            // Get all lists in the space to identify folderless ones
+            const { lists: allSpaceLists } = await this.getLists(space.id);
+            
+            // Create a set of list IDs that are in folders
+            const listsInFolders = new Set(
+              folders.flatMap(folder => (folder.lists || []).map(list => list.id))
+            );
+            
+            // Filter to get only folderless lists
+            const folderlessLists = allSpaceLists.filter(list => !listsInFolders.has(list.id));
+            
+            return { 
+              ...space, 
+              folders: foldersWithLists,
+              lists: folderlessLists 
+            };
           })
         );
-        return { ...team, spaces: spacesWithLists };
+        return { ...team, spaces: spacesWithFoldersAndLists };
       })
     );
     return { teams: result };

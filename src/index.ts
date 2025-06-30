@@ -19,8 +19,10 @@ interface CreateTaskArgs {
   status?: string;
   priority?: number;
   due_date?: number;
+  due_date_time?: boolean;
   time_estimate?: number;
   start_date?: number;
+  start_date_time?: boolean;
   notify_all?: boolean;
   parent?: string;
 }
@@ -176,6 +178,10 @@ ERROR HANDLING:
           type: 'number',
           description: 'Due date as Unix timestamp in milliseconds'
         },
+        due_date_time: {
+          type: 'boolean',
+          description: 'Set to true to include time with the due date'
+        },
         time_estimate: {
           type: 'number',
           description: 'Time estimate in milliseconds'
@@ -183,6 +189,10 @@ ERROR HANDLING:
         start_date: {
           type: 'number',
           description: 'Start date as Unix timestamp in milliseconds'
+        },
+        start_date_time: {
+          type: 'boolean',
+          description: 'Set to true to include time with the start date'
         },
         notify_all: {
           type: 'boolean',
@@ -695,17 +705,19 @@ INTERPRETING RESULTS:
   },
   {
     name: 'clickup_get_workspace_structure',
-    description: `Discover the workspace hierarchy (teams, spaces, lists).
+    description: `Discover the workspace hierarchy (teams, spaces, folders, lists).
 
 RETURNS HIERARCHICAL STRUCTURE:
 - Teams (Workspaces) you have access to
 - Spaces within each team
-- Lists within each space
+- Folders within each space
+- Lists within folders
+- Lists directly in spaces (folderless lists)
 
 USE THIS TO:
 - Find correct list_id for task creation
 - Understand workspace organization
-- Discover available spaces and lists
+- Discover available spaces, folders and lists
 - Get IDs needed for other operations
 
 BEST PRACTICES:
@@ -754,8 +766,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           status: typedArgs.status,
           priority: typedArgs.priority,
           due_date: typedArgs.due_date,
+          due_date_time: typedArgs.due_date_time,
           time_estimate: typedArgs.time_estimate,
           start_date: typedArgs.start_date,
+          start_date_time: typedArgs.start_date_time,
           notify_all: typedArgs.notify_all,
           parent: typedArgs.parent,
         });
